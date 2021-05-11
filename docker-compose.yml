@@ -1,0 +1,11 @@
+version: '2'
+services:
+  localaws:
+    container_name: localaws
+    build: .
+    restart: always
+    image: yartat/localaws
+    ports:
+      - 4567:4567
+    volumes:
+     - ./conf:/conf

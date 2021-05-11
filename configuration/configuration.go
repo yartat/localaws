@@ -1,8 +1,10 @@
 package configuration
 
 import (
+	"flamingo.me/dingo"
 	"github.com/gookit/config/v2"
 	"github.com/gookit/config/v2/yaml"
+	"github.com/subchen/go-log"
 )
 
 type LocalAwsConfiguration struct {
@@ -38,29 +40,37 @@ type RandomLatencyConfiguration struct {
 	Max int
 }
 
-type EnvironmentConfiguration struct {
-	Host                   string
-	Port                   string
-	SqsPort                string
-	SnsPort                string
-	Region                 string
-	AccountID              string
-	LogToFile              bool
-	LogFile                string
-	Topics                 []TopicConfiguration
+type SQS struct {
 	Queues                 []QueueConfiguration
 	QueueAttributeDefaults QueueAttributeConfiguration
 	RandomLatency          RandomLatencyConfiguration
 }
 
+type EnvironmentConfiguration struct {
+	Host      string
+	Port      string
+	SqsPort   string
+	SnsPort   string
+	Region    string
+	AccountID string
+	LogToFile bool
+	LogFile   string
+	SNS       []TopicConfiguration
+	SQS       SQS
+}
+
 const DefaultEnvironment = "Local"
 
-var CurrentEnvironment EnvironmentConfiguration
+func (configuration *LocalAwsConfiguration) Load(fileName string, injector *dingo.Injector) error {
+	logger, err := injector.GetInstance(log.Logger{})
+	if err != nil {
+		return err;
+	}
 
-func (configuration *LocalAwsConfiguration) Load(fileName string) error {
+	logger.(*log.Logger).Debugf("Load configuration from %s", fileName)
 	config.WithOptions(config.ParseEnv)
 	config.AddDriver(yaml.Driver)
-	err := config.LoadFiles(fileName)
+	err = config.LoadFiles(fileName)
 	if err != nil {
 		return err
 	}
@@ -76,6 +86,7 @@ func (configuration *LocalAwsConfiguration) Load(fileName string) error {
 		env = DefaultEnvironment
 	}
 
-	CurrentEnvironment = configuration.Environments[env]
+	logger.(*log.Logger).Debugf("AWS environment is '%s'", env)
+	injector.Bind(EnvironmentConfiguration{}).To(configuration.Environments[env])
 	return nil
 }
